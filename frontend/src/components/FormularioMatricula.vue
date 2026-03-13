@@ -2,7 +2,11 @@
   <div class="container">
     <h2>Agendamento Médico 🩺</h2>
 
-    <div v-if="mensagemSucesso" class="mensagem-sucesso">{{ mensagemSucesso }}</div>
+    <Teleport to="body">
+      <div v-if="mensagemSucesso" class="mensagem-sucesso-toast">
+        ✅ {{ mensagemSucesso }}
+      </div>
+    </Teleport>
     <div v-if="erroApi" class="mensagem-erro">{{ erroApi }}</div>
 
     <form @submit.prevent="enviarAgendamento">
@@ -147,7 +151,7 @@ const verificarClima = async () => {
 const erroApi = ref('');
 const mensagemSucesso = ref('');
 const carregando = ref(false);
-const carregandoCep = ref(false);
+const buscandoCep = ref(false);
 
 // A função que vai no ViaCEP buscar a rua
 const buscarCep = async () => {
@@ -155,7 +159,7 @@ const buscarCep = async () => {
   const cepLimpo = form.cep.replace(/\D/g, '');
   
   if (cepLimpo.length === 8) {
-    carregandoCep.value = true;
+    buscandoCep.value = true;
     try {
       const resposta = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`);
       
@@ -315,6 +319,31 @@ select:focus {
   font-weight: bold;
   z-index: 9999; /* Garante que fique por cima de qualquer outro elemento da tela */
   animation: deslizar 0.5s ease-out;
+}
+
+.mensagem-sucesso-toast { 
+  position: fixed;
+  top: 70px; /* Distância perfeita abaixo da barra preta */
+  right: 20px; /* Alinhado à direita */
+  background-color: #28a745; 
+  color: white; 
+  padding: 15px 25px; 
+  border-radius: 8px; 
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+  font-weight: bold;
+  z-index: 99999; /* Fica acima de TUDO na tela */
+  animation: deslizar 0.5s ease-out;
+}
+
+@keyframes deslizar {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Animação suave de entrada */

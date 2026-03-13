@@ -14,7 +14,7 @@ let db: any;
 
 async function iniciarBanco() {
   db = await open({
-    filename: './banco_clinica.sqlite',
+    filename: './banco_clinica_v2.sqlite', //para o render criar um banco do zero e rodar todos os CREATE TABLE, incluindo a coluna especialidade.
     driver: sqlite3.Database
   });
 
