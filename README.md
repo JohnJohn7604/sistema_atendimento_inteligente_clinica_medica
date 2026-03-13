@@ -23,7 +23,7 @@ Este é um sistema completo (Full-Stack) desenvolvido para o processo de agendam
 3. Inicie o servidor:
    npm run dev
 
-O servidor estará rodando na porta 3000 (http://localhost:3000).
+O servidor estará rodando na porta 3000 (https://sistema-atendimento-inteligente-clinica.onrender.com).
 
  PASSO 2: INICIANDO O FRONT-END (INTERFACE VUE.JS)
 ------------------------------------------------------

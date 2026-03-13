@@ -40,7 +40,7 @@ const carregando = ref(true);
 
 const buscarMinhasConsultas = async () => {
   try {
-    const resposta = await axios.get(`http://localhost:3000/minhas-consultas/${props.emailPaciente}`);
+    const resposta = await axios.get(`https://sistema-atendimento-inteligente-clinica.onrender.com/minhas-consultas/${props.emailPaciente}`);
     minhasConsultas.value = resposta.data;
   } catch (error) {
     console.error("Erro ao carregar consultas");

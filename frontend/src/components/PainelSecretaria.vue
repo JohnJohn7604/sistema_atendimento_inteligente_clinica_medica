@@ -69,7 +69,7 @@ const erro = ref('');
 const fazerLogin = async () => {
   erroLogin.value = '';
   try {
-    const resposta = await axios.post('http://localhost:3000/login', {
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/login', {
       usuario: usuario.value,
       senha: senha.value
     });
@@ -91,7 +91,7 @@ const buscarConsultas = async () => {
   erro.value = '';
   
   try {
-    const resposta = await axios.get('http://localhost:3000/consultas', {
+    const resposta = await axios.get('https://sistema-atendimento-inteligente-clinica.onrender.com/consultas', {
       // É aqui que mostramos o crachá para o porteiro do Back-end!
       headers: { Authorization: `Bearer ${token.value}` }
     });

@@ -98,7 +98,7 @@ const formCadastro = reactive({ nome: '', email: '', senha: '' });
 
 const fazerCadastro = async () => {
   try {
-    const resposta = await axios.post('http://localhost:3000/cadastro', formCadastro);
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/cadastro', formCadastro);
     mensagem.value = resposta.data.mensagem;
     sucesso.value = true;
     modoAuth.value = 'login'; 
@@ -111,7 +111,7 @@ const fazerCadastro = async () => {
 
 const fazerLogin = async () => {
   try {
-    const resposta = await axios.post('http://localhost:3000/login', formLogin);
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/login', formLogin);
     
     localStorage.setItem('tokenClinica', resposta.data.token);
     nomeUsuario.value = resposta.data.nome;
@@ -142,7 +142,7 @@ const sair = () => {
 const verificarAgendamentos = async () => {
   if (!emailUsuario.value) return;
   try {
-    const resposta = await axios.get(`http://localhost:3000/minhas-consultas/${emailUsuario.value}`);
+    const resposta = await axios.get(`https://sistema-atendimento-inteligente-clinica.onrender.com/minhas-consultas/${emailUsuario.value}`);
     temAgendamentos.value = resposta.data && resposta.data.length > 0;
   } catch (error) {
     console.error("Erro ao checar histórico", error);

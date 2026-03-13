@@ -171,7 +171,7 @@ const enviarAgendamento = async () => {
   mensagemSucesso.value = '';
 
   try {
-    const resposta = await axios.post('http://localhost:3000/agendamento', form);
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/agendamento', form);
     mensagemSucesso.value = resposta.data.mensagem;
     
     // CORREÇÃO 3: Limpamos só o endereço e data. Mantemos Nome e E-mail oculto intactos!
