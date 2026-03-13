@@ -32,6 +32,7 @@ async function iniciarBanco() {
     CREATE TABLE IF NOT EXISTS consultas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT,
+      especialidade TEXT,
       email TEXT,
       cep TEXT,
       logradouro TEXT,
@@ -42,35 +43,34 @@ async function iniciarBanco() {
     )
   `);
 
-  const admin = await db.get(`SELECT * FROM usuarios WHERE email = ?`, ['admin@clinica.com']);
+  // Criamos o Admin apenas se não existir, sem exibir os dados abertamente no console.log
+  const adminEmail = 'admin@clinica.com';
+  const admin = await db.get(`SELECT * FROM usuarios WHERE email = ?`, [adminEmail]);
   if (!admin) {
     await db.run(
       `INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)`, 
-      ['Admin', 'admin@clinica.com', '123', 'secretaria']
+      ['Admin', adminEmail, '123', 'secretaria']
     );
-    console.log('👩‍💻 Conta da secretária criada!');
   }
 }
 
 iniciarBanco();
 
 // ==========================================
-// 🛡️ FUNÇÕES DE VALIDAÇÃO (AS REGRAS QUE VOLTARAM)
+// 🛡️ VALIDAÇÕES
 // ==========================================
 const validarEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const validarNome = (nome: string) => /^[a-zA-ZÀ-ÿ\s]{6,}$/.test(nome); // Mínimo 6 letras, sem números
+const validarNome = (nome: string) => /^[a-zA-ZÀ-ÿ\s]{5,}$/.test(nome); // Agora ajustado para 5 letras no comentário também
 
 // ==========================================
-// 🔐 ÁREA DE SEGURANÇA E USUÁRIOS
+// 🔐 SEGURANÇA E USUÁRIOS
 // ==========================================
 app.post('/cadastro', async (req: Request, res: Response): Promise<any> => {
   const { nome, email, senha } = req.body;
 
-  // Validações de tamanho e formato
   if (!nome || !email || !senha) return res.status(400).json({ erro: 'Preencha todos os campos!' });
-  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido! Use apenas letras (mínimo 5).' });
-  if (!validarEmail(email)) return res.status(400).json({ erro: 'Formato de e-mail inválido!' });
-  if (senha.length < 3) return res.status(400).json({ erro: 'A senha deve ter pelo menos 3 caracteres.' });
+  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido! Mínimo de 5 letras.' });
+  if (!validarEmail(email)) return res.status(400).json({ erro: 'E-mail inválido!' });
 
   try {
     const usuarioExiste = await db.get(`SELECT * FROM usuarios WHERE email = ?`, [email]);
@@ -79,7 +79,7 @@ app.post('/cadastro', async (req: Request, res: Response): Promise<any> => {
     await db.run(`INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)`, [nome, email, senha, 'paciente']);
     return res.status(201).json({ mensagem: 'Conta criada com sucesso!' });
   } catch (error) {
-    return res.status(500).json({ erro: 'Erro ao salvar no banco de dados.' });
+    return res.status(500).json({ erro: 'Erro ao salvar no banco.' });
   }
 });
 
@@ -108,18 +108,16 @@ const verificarToken = (req: Request, res: Response, next: NextFunction): any =>
 };
 
 // ==========================================
-// 🚀 ROTAS DE AGENDAMENTO
+// 🚀 ROTAS DE AGENDAMENTO (FIXED)
 // ==========================================
 app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
-  const { nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
+  const { nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
 
-  if (!nome || !email || !cep || !dataConsulta || !horaConsulta) {
-    return res.status(400).json({ erro: "Preencha todos os campos obrigatórios!" });
+  if (!nome || !email || !especialidade || !cep || !dataConsulta || !horaConsulta) {
+    return res.status(400).json({ erro: "Preencha todos os campos obrigatórios, incluindo a especialidade!" });
   }
 
-  // Validação do nome e email também no agendamento
-  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido no agendamento.' });
-  if (!validarEmail(email)) return res.status(400).json({ erro: 'E-mail inválido no agendamento.' });
+  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido.' });
 
   const horarioOcupado = await db.get(
     `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ?`, 
@@ -130,10 +128,11 @@ app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
     return res.status(400).json({ erro: "Este horário já está reservado!" });
   }
 
+  // AGORA SALVANDO A ESPECIALIDADE CORRETAMENTE
   await db.run(
-    `INSERT INTO consultas (nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta]
+    `INSERT INTO consultas (nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta]
   );
 
   return res.status(201).json({ mensagem: "Agendamento confirmado!" });
@@ -151,5 +150,5 @@ app.get('/minhas-consultas/:email', async (req: Request, res: Response) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT} 🏥`);
+  console.log(`Servidor rodando! 🏥`);
 });

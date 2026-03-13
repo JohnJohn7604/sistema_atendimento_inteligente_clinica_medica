@@ -26,9 +26,6 @@
           <button type="submit" class="btn-acao">Acessar Sistema</button>
         </form>
         
-        <p v-if="modoAuth === 'login'" class="dica">
-          Acesso Secretária: admin@clinica.com / 123
-        </p>
       </div>
     </div>
 

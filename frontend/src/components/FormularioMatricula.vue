@@ -12,9 +12,23 @@
       </div>
 
       <div class="campo">
-        <label>CEP:</label>
+        <label>CEP: (Sem traços)</label>
         <input v-model="form.cep" @blur="buscarCep" type="text" placeholder="Digite apenas números" required maxlength="8" />
         <span v-if="buscandoCep" class="loading-texto">Buscando CEP...</span>
+      </div>
+
+      <div class="campo">
+        <label>Especialidade Médica:</label>
+        <select v-model="form.especialidade" required>
+          <option value="" disabled>Selecione a especialidade</option>
+          <option value="Clínico Geral">🩺 Clínico Geral</option>
+          <option value="Cardiologia">❤️ Cardiologia</option>
+          <option value="Dermatologia">🧴 Dermatologia</option>
+          <option value="Pediatria">👶 Pediatria</option>
+          <option value="Ortopedia">🦴 Ortopedia</option>
+          <option value="Ginecologista">🚺 Ginecologista</option>
+          <option value="Urologista ">🚹 Urologista</option>
+        </select>
       </div>
 
       <div class="campo" v-if="form.logradouro">
@@ -77,6 +91,7 @@ const props = defineProps({
 const form = reactive({
   nome: props.nomePaciente || '',
   email: props.emailPaciente || '',
+  especialidade: ' ', 
   cep: '',
   logradouro: '',
   bairro: '',
@@ -95,40 +110,37 @@ const previsaoTempo = ref('');
 const verificarClima = async () => {
   if (!form.cidade || !form.dataConsulta) return;
 
-  const apiKey = 'd25c21e00400b2a02c79759c061ba239'; // COLOQUE SUA CHAVE AQUI NOVAMENTE
+  const apiKey = 'd25c21e00400b2a02c79759c061ba239'; 
   const localBusca = `${form.bairro},${form.cidade}`;
   
-
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(localBusca)}&appid=${apiKey}&units=metric&lang=pt_br`;
 
   try {
     const resposta = await axios.get(url);
-    
-    // A API envia uma lista com a previsão a cada 3 horas para os próximos 5 dias.
     const previsoes = resposta.data.list;
-    const dataEscolhida = form.dataConsulta; // Formato: YYYY-MM-DD
+    const dataEscolhida = form.dataConsulta; 
 
-    // Vamos procurar na lista se existe alguma previsão para a data escolhida (pegando o horário das 12:00)
     const previsaoDoDia = previsoes.find(p => p.dt_txt.includes(`${dataEscolhida} 12:00:00`)) 
-                       || previsoes.find(p => p.dt_txt.startsWith(dataEscolhida)); // Se não tiver 12h, pega a primeira que achar do dia
+                       || previsoes.find(p => p.dt_txt.startsWith(dataEscolhida));
 
     if (previsaoDoDia) {
       const descricao = previsaoDoDia.weather[0].description;
       const temperatura = Math.round(previsaoDoDia.main.temp);
       
-      previsaoTempo.value = `No bairro ${form.bairro}: ${descricao} com ${temperatura}ºC.`;
+      // Formata a data de YYYY-MM-DD para DD/MM/AAAA
+      const dataFormatada = dataEscolhida.split('-').reverse().join('/');
+      
+      // Mensagem atualizada com a DATA
+      previsaoTempo.value = `Previsão para o dia ${dataFormatada} em ${form.bairro}: ${descricao} com ${temperatura}ºC.`;
       
       if (descricao.includes('chuva')) {
-        previsaoTempo.value += " ☔ Lembre-se de trazer um guarda-chuva!";
+        previsaoTempo.value += " ☔ Lembre-se do guarda-chuva!";
       }
     } else {
-      // UX de ouro: O professor vai adorar que você tratou essa limitação
-      previsaoTempo.value = "⚠️ A previsão do tempo só está disponível para os próximos 5 dias.";
+      previsaoTempo.value = "⚠️ Previsão detalhada disponível apenas para os próximos 5 dias.";
     }
-
   } catch (error) {
-    console.error("Erro ao buscar clima:", error);
-    previsaoTempo.value = "Não foi possível carregar a previsão no momento.";
+    // ...
   }
 };
 
@@ -172,18 +184,25 @@ const enviarAgendamento = async () => {
 
   try {
     const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/agendamento', form);
+    
+    // 1. Define a mensagem que veio do backend
     mensagemSucesso.value = resposta.data.mensagem;
     
-    // CORREÇÃO 3: Limpamos só o endereço e data. Mantemos Nome e E-mail oculto intactos!
+    // 2. Faz a notificação sumir após 4 segundos (4000 milissegundos)
+    setTimeout(() => {
+      mensagemSucesso.value = '';
+    }, 4000);
+    
+    // Limpa o formulário...
     form.cep = '';
     form.logradouro = '';
     form.bairro = '';
     form.cidade = '';
     form.dataConsulta = '';
     form.horaConsulta = '';
+    form.especialidade = ''; // Não esqueça de limpar a especialidade também!
     previsaoTempo.value = '';
 
-    // Avisa o App.vue para atualizar e mostrar o botão de agendamentos no topo
     emit('agendamentoCriado'); 
     
   } catch (error) {
@@ -277,4 +296,48 @@ button:disabled {
   border: none;
   border-radius: 5px;
   cursor: pointer; }
+
+select:focus {
+  border-color: #9abf74;
+  outline: none;
+  box-shadow: 0 0 5px rgba(154, 191, 116, 0.5);
+}
+
+.mensagem-sucesso { 
+  position: fixed;
+  top: 0px; /* 👈 A mágica acontece aqui! Aumentamos para 80px para dar espaço ao cabeçalho/botão Sair */
+  right: 0px; /* Mantém colado no lado direito */
+  background-color: #28a745; /* Verde sucesso */
+  color: white; 
+  padding: 15px 25px; 
+  border-radius: 8px; 
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+  font-weight: bold;
+  z-index: 9999; /* Garante que fique por cima de qualquer outro elemento da tela */
+  animation: deslizar 0.5s ease-out;
+}
+
+/* Animação suave de entrada */
+@keyframes deslizar {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animação para a notificação entrar deslizando pela direita */
+@keyframes deslizar {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 </style>

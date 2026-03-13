@@ -74,11 +74,11 @@ const fazerLogin = async () => {
       senha: senha.value
     });
 
-    // Se deu certo, guardamos o crachá e mudamos a tela!
+    
     token.value = resposta.data.token;
     logado.value = true;
     
-    // Agora que temos o crachá, podemos buscar a lista
+    
     buscarConsultas();
   } catch (err) {
     erroLogin.value = 'Usuário ou senha incorretos!';
@@ -92,7 +92,7 @@ const buscarConsultas = async () => {
   
   try {
     const resposta = await axios.get('https://sistema-atendimento-inteligente-clinica.onrender.com/consultas', {
-      // É aqui que mostramos o crachá para o porteiro do Back-end!
+      
       headers: { Authorization: `Bearer ${token.value}` }
     });
     consultas.value = resposta.data;
