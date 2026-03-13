@@ -68,7 +68,7 @@ app.post('/cadastro', async (req: Request, res: Response): Promise<any> => {
 
   // Validações de tamanho e formato
   if (!nome || !email || !senha) return res.status(400).json({ erro: 'Preencha todos os campos!' });
-  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido! Use apenas letras (mínimo 3).' });
+  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido! Use apenas letras (mínimo 5).' });
   if (!validarEmail(email)) return res.status(400).json({ erro: 'Formato de e-mail inválido!' });
   if (senha.length < 3) return res.status(400).json({ erro: 'A senha deve ter pelo menos 3 caracteres.' });
 
