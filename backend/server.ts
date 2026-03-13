@@ -10,19 +10,14 @@ app.use(express.json());
 
 const SEGREDO = 'chave_secreta_faculdade_123';
 
-// ==========================================
-// 🗄️ CONFIGURAÇÃO DO BANCO DE DADOS SQLITE
-// ==========================================
 let db: any;
 
-// Função que inicia o banco e cria as tabelas se não existirem
 async function iniciarBanco() {
   db = await open({
-    filename: './banco_clinica.sqlite', // O arquivo que será criado na sua pasta!
+    filename: './banco_clinica.sqlite',
     driver: sqlite3.Database
   });
 
-  // Cria a tabela de Usuários
   await db.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +28,6 @@ async function iniciarBanco() {
     )
   `);
 
-  // Cria a tabela de Consultas
   await db.exec(`
     CREATE TABLE IF NOT EXISTS consultas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,33 +42,42 @@ async function iniciarBanco() {
     )
   `);
 
-  // Verifica se a Secretária já existe, se não, cadastra ela
   const admin = await db.get(`SELECT * FROM usuarios WHERE email = ?`, ['admin@clinica.com']);
   if (!admin) {
     await db.run(
       `INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)`, 
       ['Admin', 'admin@clinica.com', '123', 'secretaria']
     );
-    console.log('👩‍💻 Conta da secretária criada no banco!');
+    console.log('👩‍💻 Conta da secretária criada!');
   }
 }
 
-// Inicia o banco assim que o arquivo é lido
 iniciarBanco();
+
+// ==========================================
+// 🛡️ FUNÇÕES DE VALIDAÇÃO (AS REGRAS QUE VOLTARAM)
+// ==========================================
+const validarEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validarNome = (nome: string) => /^[a-zA-ZÀ-ÿ\s]{6,}$/.test(nome); // Mínimo 6 letras, sem números
 
 // ==========================================
 // 🔐 ÁREA DE SEGURANÇA E USUÁRIOS
 // ==========================================
 app.post('/cadastro', async (req: Request, res: Response): Promise<any> => {
   const { nome, email, senha } = req.body;
+
+  // Validações de tamanho e formato
   if (!nome || !email || !senha) return res.status(400).json({ erro: 'Preencha todos os campos!' });
+  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido! Use apenas letras (mínimo 3).' });
+  if (!validarEmail(email)) return res.status(400).json({ erro: 'Formato de e-mail inválido!' });
+  if (senha.length < 3) return res.status(400).json({ erro: 'A senha deve ter pelo menos 3 caracteres.' });
 
   try {
     const usuarioExiste = await db.get(`SELECT * FROM usuarios WHERE email = ?`, [email]);
     if (usuarioExiste) return res.status(400).json({ erro: 'Este e-mail já está cadastrado.' });
 
     await db.run(`INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)`, [nome, email, senha, 'paciente']);
-    return res.status(201).json({ mensagem: 'Conta criada com sucesso! Faça seu login.' });
+    return res.status(201).json({ mensagem: 'Conta criada com sucesso!' });
   } catch (error) {
     return res.status(500).json({ erro: 'Erro ao salvar no banco de dados.' });
   }
@@ -105,8 +108,37 @@ const verificarToken = (req: Request, res: Response, next: NextFunction): any =>
 };
 
 // ==========================================
-// 🚀 ROTAS DE AGENDAMENTO DA CLÍNICA
+// 🚀 ROTAS DE AGENDAMENTO
 // ==========================================
+app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
+  const { nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
+
+  if (!nome || !email || !cep || !dataConsulta || !horaConsulta) {
+    return res.status(400).json({ erro: "Preencha todos os campos obrigatórios!" });
+  }
+
+  // Validação do nome e email também no agendamento
+  if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido no agendamento.' });
+  if (!validarEmail(email)) return res.status(400).json({ erro: 'E-mail inválido no agendamento.' });
+
+  const horarioOcupado = await db.get(
+    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ?`, 
+    [dataConsulta, horaConsulta]
+  );
+  
+  if (horarioOcupado) {
+    return res.status(400).json({ erro: "Este horário já está reservado!" });
+  }
+
+  await db.run(
+    `INSERT INTO consultas (nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta]
+  );
+
+  return res.status(201).json({ mensagem: "Agendamento confirmado!" });
+});
+
 app.get('/consultas', verificarToken, async (req: Request, res: Response) => {
   const todasConsultas = await db.all(`SELECT * FROM consultas`);
   res.json(todasConsultas);
@@ -117,33 +149,7 @@ app.get('/minhas-consultas/:email', async (req: Request, res: Response) => {
   res.json(minhasConsultas);
 });
 
-app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
-  const { nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
-
-  if (!nome || !email || !cep || !dataConsulta || !horaConsulta) {
-    return res.status(400).json({ erro: "Preencha todos os campos, incluindo a hora!" });
-  }
-
-  // Verifica horários no banco
-  const horarioOcupado = await db.get(
-    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ?`, 
-    [dataConsulta, horaConsulta]
-  );
-  
-  if (horarioOcupado) {
-    return res.status(400).json({ erro: "Este horário já está reservado. Escolha outro!" });
-  }
-
-  // Salva a consulta
-  await db.run(
-    `INSERT INTO consultas (nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [nome, email, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta]
-  );
-
-  return res.status(201).json({ mensagem: "Agendamento confirmado com sucesso!" });
-});
-
-app.listen(3000, () => {
-  console.log("Servidor da Clínica rodando na porta 3000 com SQLite! 🏥🗄️");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT} 🏥`);
 });
