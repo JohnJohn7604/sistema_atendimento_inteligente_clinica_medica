@@ -1,7 +1,7 @@
 
 # 🏥 Sistema de Agendamento Inteligente - Clínica Médica
 
-Este é um sistema completo (Full-Stack) desenvolvido para o processo de agendamento de consultas de uma clínica médica, cumprindo e expandindo todos os requisitos acadêmicos propostos. O projeto contempla um fluxo completo de ponta a ponta: desde a autenticação de usuários até um CRUD completo de consultas e integração com APIs externas.
+Este é um sistema completo (Full-Stack) desenvolvido para o processo de agendamento de consultas de uma clínica médica, O projeto contempla um fluxo completo de ponta a ponta: desde a autenticação de usuários até um CRUD completo de consultas e integração com APIs externas.
 
 ## 🚀 Como Rodar Online (Live Demo)
 
