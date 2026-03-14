@@ -8,28 +8,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==========================================
-// 👩‍💼 ROTA DA SECRETÁRIA (VER TODAS AS CONSULTAS)
-// ==========================================
-app.get('/consultas', async (req: Request, res: Response): Promise<any> => {
-  try {
-    // Busca tudo ordenado por data e depois por hora
-    const todasConsultas = await db.all(
-      `SELECT * FROM consultas ORDER BY dataConsulta ASC, horaConsulta ASC`
-    );
-    return res.json(todasConsultas);
-  } catch (error) {
-    return res.status(500).json({ erro: 'Erro ao buscar todas as consultas.' });
-  }
-});
-
 const SEGREDO = 'chave_secreta_faculdade_123';
-
 let db: any;
 
+// ==========================================
+// INICIALIZAÇÃO DO BANCO DE DADOS
+// ==========================================
 async function iniciarBanco() {
   db = await open({
-    filename: './banco_clinica_v2.sqlite', //para o render criar um banco do zero e rodar todos os CREATE TABLE, incluindo a coluna especialidade.
+    filename: './banco_clinica_v2.sqlite', // Cria o banco para o Render
     driver: sqlite3.Database
   });
 
@@ -58,7 +45,6 @@ async function iniciarBanco() {
     )
   `);
 
-  // Criamos o Admin apenas se não existir, sem exibir os dados abertamente no console.log
   const adminEmail = 'admin@clinica.com';
   const admin = await db.get(`SELECT * FROM usuarios WHERE email = ?`, [adminEmail]);
   if (!admin) {
@@ -72,13 +58,26 @@ async function iniciarBanco() {
 iniciarBanco();
 
 // ==========================================
-// 🛡️ VALIDAÇÕES
+// VALIDAÇÕES E MIDDLEWARES
 // ==========================================
 const validarEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const validarNome = (nome: string) => /^[a-zA-ZÀ-ÿ\s]{5,}$/.test(nome); // Agora ajustado para 5 letras no comentário também
+const validarNome = (nome: string) => /^[a-zA-ZÀ-ÿ\s]{5,}$/.test(nome);
+
+const verificarToken = (req: Request, res: Response, next: NextFunction): any => {
+  const tokenHeader = req.headers['authorization'];
+  if (!tokenHeader) return res.status(403).json({ erro: 'Acesso negado.' });
+
+  try {
+    const tokenLimpo = tokenHeader.split(' ')[1]; 
+    jwt.verify(tokenLimpo, SEGREDO);
+    next(); 
+  } catch (error) {
+    return res.status(401).json({ erro: 'Token inválido!' });
+  }
+};
 
 // ==========================================
-// 🔐 SEGURANÇA E USUÁRIOS
+// SEGURANÇA E USUÁRIOS
 // ==========================================
 app.post('/cadastro', async (req: Request, res: Response): Promise<any> => {
   const { nome, email, senha } = req.body;
@@ -109,68 +108,13 @@ app.post('/login', async (req: Request, res: Response): Promise<any> => {
   return res.status(401).json({ erro: 'E-mail ou senha incorretos!' });
 });
 
-const verificarToken = (req: Request, res: Response, next: NextFunction): any => {
-  const tokenHeader = req.headers['authorization'];
-  if (!tokenHeader) return res.status(403).json({ erro: 'Acesso negado.' });
-
-  try {
-    const tokenLimpo = tokenHeader.split(' ')[1]; 
-    jwt.verify(tokenLimpo, SEGREDO);
-    next(); 
-  } catch (error) {
-    return res.status(401).json({ erro: 'Token inválido!' });
-  }
-};
 
 // ==========================================
-// 🚀 ROTAS DE AGENDAMENTO 
+//  ROTAS DE AGENDAMENTO (PACIENTE)
 // ==========================================
+
+// 1. Criar Consulta
 app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
-
-  // ==========================================
-  // 🗑️ ROTA PARA DELETAR AGENDAMENTO
-  // ==========================================
-  app.delete('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-    try {
-      await db.run(`DELETE FROM consultas WHERE id = ?`, [id]);
-      return res.json({ mensagem: 'Agendamento cancelado com sucesso!' });
-    } catch (error) {
-      return res.status(500).json({ erro: 'Erro ao cancelar o agendamento.' });
-    }
-  });
-
-  // ==========================================
-  // ✏️ ROTA PARA ALTERAR AGENDAMENTO
-  // ==========================================
-  app.put('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
-    const { id } = req.params;
-    const { dataConsulta, horaConsulta, especialidade } = req.body;
-
-    if (!dataConsulta || !horaConsulta || !especialidade) {
-      return res.status(400).json({ erro: 'Preencha os dados para atualizar.' });
-    }
-
-    // Verifica se o novo horário já está ocupado por OUTRA pessoa
-    const horarioOcupado = await db.get(
-      `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND id != ?`,
-      [dataConsulta, horaConsulta, id]
-    );
-
-    if (horarioOcupado) {
-      return res.status(400).json({ erro: "Este horário já está reservado por outro paciente!" });
-    }
-
-    try {
-      await db.run(
-        `UPDATE consultas SET dataConsulta = ?, horaConsulta = ?, especialidade = ? WHERE id = ?`,
-        [dataConsulta, horaConsulta, especialidade, id]
-      );
-      return res.json({ mensagem: 'Agendamento atualizado com sucesso!' });
-    } catch (error) {
-      return res.status(500).json({ erro: 'Erro ao atualizar o agendamento.' });
-    }
-  });
   const { nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
 
   if (!nome || !email || !especialidade || !cep || !dataConsulta || !horaConsulta) {
@@ -188,28 +132,85 @@ app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
     return res.status(400).json({ erro: "Este horário já está reservado!" });
   }
 
-  // AGORA SALVANDO A ESPECIALIDADE CORRETAMENTE
-  await db.run(
-    `INSERT INTO consultas (nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta]
-  );
-
-  return res.status(201).json({ mensagem: "Agendamento confirmado!" });
+  try {
+    await db.run(
+      `INSERT INTO consultas (nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta]
+    );
+    return res.status(201).json({ mensagem: "Agendamento confirmado!" });
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao salvar agendamento.' });
+  }
 });
 
-app.get('/consultas', verificarToken, async (req: Request, res: Response) => {
-  const todasConsultas = await db.all(`SELECT * FROM consultas`);
-  res.json(todasConsultas);
-});
-
+// 2. Buscar Consultas do Paciente
 app.get('/minhas-consultas/:email', async (req: Request, res: Response) => {
-  const minhasConsultas = await db.all(`SELECT * FROM consultas WHERE email = ?`, [req.params.email]);
+  const minhasConsultas = await db.all(
+    `SELECT * FROM consultas WHERE email = ? ORDER BY dataConsulta ASC, horaConsulta ASC`, 
+    [req.params.email]
+  );
   res.json(minhasConsultas);
 });
 
+// 3. Editar Consulta
+app.put('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
+  const { id } = req.params;
+  const { dataConsulta, horaConsulta, especialidade } = req.body;
 
+  if (!dataConsulta || !horaConsulta || !especialidade) {
+    return res.status(400).json({ erro: 'Preencha os dados para atualizar.' });
+  }
+
+  const horarioOcupado = await db.get(
+    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND id != ?`,
+    [dataConsulta, horaConsulta, id]
+  );
+
+  if (horarioOcupado) {
+    return res.status(400).json({ erro: "Este horário já está reservado por outro paciente!" });
+  }
+
+  try {
+    await db.run(
+      `UPDATE consultas SET dataConsulta = ?, horaConsulta = ?, especialidade = ? WHERE id = ?`,
+      [dataConsulta, horaConsulta, especialidade, id]
+    );
+    return res.json({ mensagem: 'Agendamento atualizado com sucesso!' });
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao atualizar o agendamento.' });
+  }
+});
+
+// 4. Deletar Consulta
+app.delete('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
+  const { id } = req.params;
+  try {
+    await db.run(`DELETE FROM consultas WHERE id = ?`, [id]);
+    return res.json({ mensagem: 'Agendamento cancelado com sucesso!' });
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao cancelar o agendamento.' });
+  }
+});
+
+// ==========================================
+// ROTA DA SECRETÁRIA (VER TODAS AS CONSULTAS)
+// ==========================================
+app.get('/consultas', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const todasConsultas = await db.all(
+      `SELECT * FROM consultas ORDER BY dataConsulta ASC, horaConsulta ASC`
+    );
+    return res.json(todasConsultas);
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao buscar todas as consultas.' });
+  }
+});
+
+// ==========================================
+//  START DO SERVIDOR
+// ==========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando! 🏥`);
+  console.log(`Servidor rodando na porta ${PORT}! 🏥`);
 });
