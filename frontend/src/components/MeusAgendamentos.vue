@@ -62,6 +62,8 @@
                 <option value="Dermatologia">Dermatologia</option>
                 <option value="Pediatria">Pediatria</option>
                 <option value="Ortopedia">Ortopedia</option>
+                <option value="Ginecologia">Ginecologia</option>
+                <option value="Urologista">Urologista</option>
               </select>
             </td>
             
@@ -95,7 +97,7 @@ const carregando = ref(true);
 const erroApi = ref('');
 
 // URL do Backend
-const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com';
+const baseUrl = 'http://localhost:3000';
 
 // ==========================================
 // 🔍 1. BUSCAR AS CONSULTAS

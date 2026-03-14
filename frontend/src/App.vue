@@ -7,7 +7,7 @@
         <div class="abas">
           <button :class="{ ativo: modoAuth === 'login' }" @click="modoAuth = 'login'">Entrar</button>
           <button :class="{ ativo: modoAuth === 'cadastro' }" @click="modoAuth = 'cadastro'">Criar Conta</button>
-          <button @click="telaAtual = 'login-secretaria'" class="btn-acesso-restrito">Acesso da Secretária 👩‍💼</button>
+          <button @click="telaAtual = 'login-secretaria'" class=".btn-acesso-restrito">Acesso da Secretária </button>
         </div>
 
         <div v-if="mensagem" :class="{'sucesso-texto': sucesso, 'erro-texto': !sucesso}">
@@ -26,6 +26,10 @@
           <input v-model="formLogin.senha" type="password" placeholder="Senha" required />
           <button type="submit" class="btn-acao">Acessar Sistema</button>
         </form>
+
+        <p v-if="erroCadastro" style="color: red; text-align: center;">
+          {{ erroCadastro }}
+        </p>
         
       </div>
     </div>
@@ -137,21 +141,33 @@ const fazerLoginSecretaria = () => {
 };
 
 const fazerCadastro = async () => {
+  erroCadastro.value = ''; // Limpa o erro anterior (se tiver) ao clicar no botão
+
   try {
-    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/cadastro', formCadastro);
-    mensagem.value = resposta.data.mensagem;
-    sucesso.value = true;
+    // 1. Usamos a URL completa do seu backend local
+    const resposta = await axios.post('http://localhost:3000/cadastro', {
+      // 2. Puxamos os dados de dentro da "caixinha" formCadastro!
+      nome: formCadastro.nome,
+      email: formCadastro.email,
+      senha: formCadastro.senha
+    });
+    
+    alert(resposta.data.mensagem); // "Conta criada com sucesso!"
+    
+    // Opcional: Já joga o usuário para a tela de entrar e limpa os campos
     modoAuth.value = 'login'; 
-    formCadastro.senha = ''; 
+    formCadastro.nome = '';
+    formCadastro.email = '';
+    formCadastro.senha = '';
+    
   } catch (error) {
-    mensagem.value = error.response?.data?.erro || "Erro ao cadastrar.";
-    sucesso.value = false;
+    erroCadastro.value = error.response?.data?.erro || "Erro ao conectar com o servidor.";
   }
 };
 
 const fazerLogin = async () => {
   try {
-    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/login', formLogin);
+    const resposta = await axios.post('http://localhost:3000/login', formLogin);
     
     localStorage.setItem('tokenClinica', resposta.data.token);
     nomeUsuario.value = resposta.data.nome;
@@ -182,12 +198,14 @@ const sair = () => {
 const verificarAgendamentos = async () => {
   if (!emailUsuario.value) return;
   try {
-    const resposta = await axios.get(`https://sistema-atendimento-inteligente-clinica.onrender.com/minhas-consultas/${emailUsuario.value}`);
+    const resposta = await axios.get(`http://localhost:3000/minhas-consultas/${emailUsuario.value}`);
     temAgendamentos.value = resposta.data && resposta.data.length > 0;
   } catch (error) {
     console.error("Erro ao checar histórico", error);
   }
 };
+
+const erroCadastro = ref('');
 </script>
 
 <style>
@@ -293,18 +311,6 @@ form input {
   margin-bottom: 10px;
 }
 
-.btn-acesso-restrito {
-  background: transparent;
-  border: 1px solid #ccc;
-  color: #666;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 20px;
-  font-size: 12px;
-}
-.btn-acesso-restrito:hover { background: #f1f1f1; }
-
 .container-login-sec {
   display: flex;
   justify-content: center;
@@ -354,4 +360,24 @@ form input {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Container da opção de menu que contém o texto */
+.btn-acesso-restrito {
+  /* Garante que o texto possa se mover */
+  display: block; 
+  /* Centraliza todas as linhas de texto dentro do container */
+  text-align: center; 
+  /* Permite que o texto quebre em linhas e não seja cortado */
+  white-space: normal; 
+  word-wrap: break-word;
+  /* Outros estilos para alinhar com o design (ex: tamanho, cor, padding) */
+  color: #555;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 10px;
+  min-width: 100px; /* Garante espaço para a centralização */
+}
+
+.btn-acesso-restrito.hover { background: #f1f1f1a7; }
 </style>

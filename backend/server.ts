@@ -118,20 +118,29 @@ app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
   const { nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
 
   if (!nome || !email || !especialidade || !cep || !dataConsulta || !horaConsulta) {
-    return res.status(400).json({ erro: "Preencha todos os campos obrigatórios, incluindo a especialidade!" });
+    return res.status(400).json({ erro: "Preencha todos os campos obrigatórios!" });
   }
-
   if (!validarNome(nome)) return res.status(400).json({ erro: 'Nome inválido.' });
 
-  const horarioOcupado = await db.get(
-    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ?`, 
-    [dataConsulta, horaConsulta]
+  // 🎯 REGRA 1: O paciente já tem consulta nesse mesmo dia e hora em QUALQUER lugar?
+  const pacienteOcupado = await db.get(
+    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND email = ?`,
+    [dataConsulta, horaConsulta, email]
   );
-  
-  if (horarioOcupado) {
-    return res.status(400).json({ erro: "Este horário já está reservado!" });
+  if (pacienteOcupado) {
+    return res.status(400).json({ erro: "mesmo horario reservado em outra unidade" });
   }
 
+  // 🎯 REGRA 2: A Unidade (bairro) já está com esse horário preenchido por outra pessoa?
+  const unidadeOcupada = await db.get(
+    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND bairro = ?`, 
+    [dataConsulta, horaConsulta, bairro]
+  );
+  if (unidadeOcupada) {
+    return res.status(400).json({ erro: `Este horário já está reservado na unidade ${bairro}!` });
+  }
+
+  // Se passou nas duas regras, salva no banco!
   try {
     await db.run(
       `INSERT INTO consultas (nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta) 
@@ -141,6 +150,52 @@ app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
     return res.status(201).json({ mensagem: "Agendamento confirmado!" });
   } catch (error) {
     return res.status(500).json({ erro: 'Erro ao salvar agendamento.' });
+  }
+});
+
+// ==========================================
+// 3. EDITAR CONSULTA (Com dupla verificação)
+// ==========================================
+app.put('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
+  const { id } = req.params;
+  const { dataConsulta, horaConsulta, especialidade } = req.body;
+
+  if (!dataConsulta || !horaConsulta || !especialidade) {
+    return res.status(400).json({ erro: 'Preencha os dados para atualizar.' });
+  }
+
+  // Puxa os dados da consulta atual para saber o email e o bairro
+  const consultaAtual = await db.get(`SELECT email, bairro FROM consultas WHERE id = ?`, [id]);
+
+  if (consultaAtual) {
+    // 🎯 REGRA 1: O paciente já tem OUTRA consulta nesse horário? (Ignorando a consulta que ele está editando agora)
+    const pacienteOcupado = await db.get(
+      `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND email = ? AND id != ?`,
+      [dataConsulta, horaConsulta, consultaAtual.email, id]
+    );
+    if (pacienteOcupado) {
+      return res.status(400).json({ erro: "mesmo horario reservado em outra unidade" });
+    }
+
+    // 🎯 REGRA 2: A Unidade já está lotada nesse horário?
+    const unidadeOcupada = await db.get(
+      `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND bairro = ? AND id != ?`,
+      [dataConsulta, horaConsulta, consultaAtual.bairro, id]
+    );
+    if (unidadeOcupada) {
+      return res.status(400).json({ erro: `Este horário já está reservado na unidade ${consultaAtual.bairro} por outro paciente!` });
+    }
+  }
+
+  // Se passou nas regras, atualiza!
+  try {
+    await db.run(
+      `UPDATE consultas SET dataConsulta = ?, horaConsulta = ?, especialidade = ? WHERE id = ?`,
+      [dataConsulta, horaConsulta, especialidade, id]
+    );
+    return res.json({ mensagem: 'Agendamento atualizado com sucesso!' });
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao atualizar o agendamento.' });
   }
 });
 
@@ -162,13 +217,19 @@ app.put('/agendamento/:id', async (req: Request, res: Response): Promise<any> =>
     return res.status(400).json({ erro: 'Preencha os dados para atualizar.' });
   }
 
-  const horarioOcupado = await db.get(
-    `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND id != ?`,
-    [dataConsulta, horaConsulta, id]
-  );
+  // 🎯 Passo 1: Descobrir em qual bairro (unidade) é esta consulta antes de editar
+  const consultaAtual = await db.get(`SELECT bairro FROM consultas WHERE id = ?`, [id]);
 
-  if (horarioOcupado) {
-    return res.status(400).json({ erro: "Este horário já está reservado por outro paciente!" });
+  if (consultaAtual) {
+    // 🎯 Passo 2: Verifica se alguém já marcou nesse mesmo bairro, dia e hora
+    const horarioOcupado = await db.get(
+      `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND bairro = ? AND id != ?`,
+      [dataConsulta, horaConsulta, consultaAtual.bairro, id]
+    );
+
+    if (horarioOcupado) {
+      return res.status(400).json({ erro: `Este horário já está reservado na unidade ${consultaAtual.bairro} por outro paciente!` });
+    }
   }
 
   try {
@@ -213,4 +274,16 @@ app.get('/consultas', async (req: Request, res: Response): Promise<any> => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}! 🏥`);
+});
+
+// ==========================================
+// 📋 ROTA PARA BUSCAR PACIENTES CADASTRADOS
+// ==========================================
+app.get('/pacientes', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const pacientes = await db.all(`SELECT id, nome, email FROM usuarios WHERE perfil = 'paciente'`);
+    return res.json(pacientes);
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao buscar pacientes.' });
+  }
 });
