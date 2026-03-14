@@ -108,9 +108,54 @@ const verificarToken = (req: Request, res: Response, next: NextFunction): any =>
 };
 
 // ==========================================
-// 🚀 ROTAS DE AGENDAMENTO (FIXED)
+// 🚀 ROTAS DE AGENDAMENTO 
 // ==========================================
 app.post('/agendamento', async (req: Request, res: Response): Promise<any> => {
+
+  // ==========================================
+  // 🗑️ ROTA PARA DELETAR AGENDAMENTO
+  // ==========================================
+  app.delete('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
+    const { id } = req.params;
+    try {
+      await db.run(`DELETE FROM consultas WHERE id = ?`, [id]);
+      return res.json({ mensagem: 'Agendamento cancelado com sucesso!' });
+    } catch (error) {
+      return res.status(500).json({ erro: 'Erro ao cancelar o agendamento.' });
+    }
+  });
+
+  // ==========================================
+  // ✏️ ROTA PARA ALTERAR AGENDAMENTO
+  // ==========================================
+  app.put('/agendamento/:id', async (req: Request, res: Response): Promise<any> => {
+    const { id } = req.params;
+    const { dataConsulta, horaConsulta, especialidade } = req.body;
+
+    if (!dataConsulta || !horaConsulta || !especialidade) {
+      return res.status(400).json({ erro: 'Preencha os dados para atualizar.' });
+    }
+
+    // Verifica se o novo horário já está ocupado por OUTRA pessoa
+    const horarioOcupado = await db.get(
+      `SELECT * FROM consultas WHERE dataConsulta = ? AND horaConsulta = ? AND id != ?`,
+      [dataConsulta, horaConsulta, id]
+    );
+
+    if (horarioOcupado) {
+      return res.status(400).json({ erro: "Este horário já está reservado por outro paciente!" });
+    }
+
+    try {
+      await db.run(
+        `UPDATE consultas SET dataConsulta = ?, horaConsulta = ?, especialidade = ? WHERE id = ?`,
+        [dataConsulta, horaConsulta, especialidade, id]
+      );
+      return res.json({ mensagem: 'Agendamento atualizado com sucesso!' });
+    } catch (error) {
+      return res.status(500).json({ erro: 'Erro ao atualizar o agendamento.' });
+    }
+  });
   const { nome, email, especialidade, cep, logradouro, bairro, cidade, dataConsulta, horaConsulta } = req.body;
 
   if (!nome || !email || !especialidade || !cep || !dataConsulta || !horaConsulta) {

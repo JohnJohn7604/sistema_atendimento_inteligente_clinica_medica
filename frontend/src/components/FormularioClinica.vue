@@ -114,7 +114,7 @@ const previsaoTempo = ref('');
 const verificarClima = async () => {
   if (!form.cidade || !form.dataConsulta) return;
 
-  const apiKey = 'd25c21e00400b2a02c79759c061ba239'; 
+  const apiKey = import.meta.env.VITE_OPENWEATHER_KEY; 
   const localBusca = `${form.bairro},${form.cidade}`;
   
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(localBusca)}&appid=${apiKey}&units=metric&lang=pt_br`;
@@ -174,7 +174,7 @@ const buscarCep = async () => {
     } catch (error) {
       console.error("Erro na busca do CEP:", error);
     } finally {
-      carregandoCep.value = false;
+      buscandoCep.value = false;
     }
   }
 };

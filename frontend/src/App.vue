@@ -45,7 +45,7 @@
         </div>
       </div>
       
-      <FormularioMatricula 
+      <FormularioClinica
         v-if="telaPaciente === 'agendar'"
         :nome-paciente="nomeUsuario" 
         :email-paciente="emailUsuario" 
@@ -73,7 +73,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import axios from 'axios';
-import FormularioMatricula from './components/FormularioMatricula.vue';
+import FormularioClinica from './components/FormularioClinica.vue';
 import PainelSecretaria from './components/PainelSecretaria.vue';
 import MeusAgendamentos from './components/MeusAgendamentos.vue';
 
