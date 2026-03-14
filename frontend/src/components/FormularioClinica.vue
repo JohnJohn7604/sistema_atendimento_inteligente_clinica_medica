@@ -309,7 +309,7 @@ select:focus {
 
 .mensagem-sucesso { 
   position: fixed;
-  top: 0px; /* 👈 A mágica acontece aqui! Aumentamos para 80px para dar espaço ao cabeçalho/botão Sair */
+  top: 0px; /* 
   right: 0px; /* Mantém colado no lado direito */
   background-color: #28a745; /* Verde sucesso */
   color: white; 

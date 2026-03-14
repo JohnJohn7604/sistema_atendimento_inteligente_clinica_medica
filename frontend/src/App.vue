@@ -121,7 +121,7 @@ const emailUsuario = ref('');
 const mensagem = ref('');
 const sucesso = ref(false);
 
-// Aqui estão as memórias separadas que criamos!
+// memorias separadas
 const formLogin = reactive({ email: '', senha: '' });
 const formCadastro = reactive({ nome: '', email: '', senha: '' });
 

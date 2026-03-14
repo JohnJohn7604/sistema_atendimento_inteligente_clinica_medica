@@ -142,9 +142,8 @@ const todasConsultas = ref([]);
 const carregando = ref(true);
 const erroApi = ref('');
 
-// Para testar localmente, deixe localhost. Depois troque pelo link do Render!
+//link do render
 const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com'; 
-// const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com';
 
 const buscarTodasConsultas = async () => {
   carregando.value = true;
@@ -160,7 +159,7 @@ const buscarTodasConsultas = async () => {
 };
 
 // ==========================================
-// ✏️ LÓGICA DE EDIÇÃO E EXCLUSÃO
+// LÓGICA DE EDIÇÃO E EXCLUSÃO
 // ==========================================
 const consultaEditando = ref(null);
 const formEdicao = reactive({ dataConsulta: '', horaConsulta: '', especialidade: '' });
@@ -195,7 +194,7 @@ const deletarAgendamento = async (id, nomePaciente) => {
 };
 
 // ==========================================
-// 🪟 LÓGICA DO MODAL (NOVO AGENDAMENTO)
+// LÓGICA DO MODAL (NOVO AGENDAMENTO)
 // ==========================================
 const mostrarModal = ref(false);
 const listaPacientes = ref([]);
