@@ -8,6 +8,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ==========================================
+// 👩‍💼 ROTA DA SECRETÁRIA (VER TODAS AS CONSULTAS)
+// ==========================================
+app.get('/consultas', async (req: Request, res: Response): Promise<any> => {
+  try {
+    // Busca tudo ordenado por data e depois por hora
+    const todasConsultas = await db.all(
+      `SELECT * FROM consultas ORDER BY dataConsulta ASC, horaConsulta ASC`
+    );
+    return res.json(todasConsultas);
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro ao buscar todas as consultas.' });
+  }
+});
+
 const SEGREDO = 'chave_secreta_faculdade_123';
 
 let db: any;
@@ -193,20 +208,6 @@ app.get('/minhas-consultas/:email', async (req: Request, res: Response) => {
   res.json(minhasConsultas);
 });
 
-// ==========================================
-// 👩‍💼 ROTA DA SECRETÁRIA (VER TODAS AS CONSULTAS)
-// ==========================================
-app.get('/consultas', async (req: Request, res: Response): Promise<any> => {
-  try {
-    // Busca tudo ordenado por data e depois por hora
-    const todasConsultas = await db.all(
-      `SELECT * FROM consultas ORDER BY dataConsulta ASC, horaConsulta ASC`
-    );
-    return res.json(todasConsultas);
-  } catch (error) {
-    return res.status(500).json({ erro: 'Erro ao buscar todas as consultas.' });
-  }
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
