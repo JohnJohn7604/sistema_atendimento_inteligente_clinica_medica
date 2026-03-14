@@ -143,7 +143,7 @@ const carregando = ref(true);
 const erroApi = ref('');
 
 // Para testar localmente, deixe localhost. Depois troque pelo link do Render!
-const baseUrl = 'http://localhost:3000'; 
+const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com'; 
 // const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com';
 
 const buscarTodasConsultas = async () => {

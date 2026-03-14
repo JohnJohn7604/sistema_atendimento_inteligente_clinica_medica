@@ -145,7 +145,7 @@ const fazerCadastro = async () => {
 
   try {
     // 1. Usamos a URL completa do seu backend local
-    const resposta = await axios.post('http://localhost:3000/cadastro', {
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/cadastro', {
       // 2. Puxamos os dados de dentro da "caixinha" formCadastro!
       nome: formCadastro.nome,
       email: formCadastro.email,
@@ -167,7 +167,7 @@ const fazerCadastro = async () => {
 
 const fazerLogin = async () => {
   try {
-    const resposta = await axios.post('http://localhost:3000/login', formLogin);
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/login', formLogin);
     
     localStorage.setItem('tokenClinica', resposta.data.token);
     nomeUsuario.value = resposta.data.nome;
@@ -198,7 +198,7 @@ const sair = () => {
 const verificarAgendamentos = async () => {
   if (!emailUsuario.value) return;
   try {
-    const resposta = await axios.get(`http://localhost:3000/minhas-consultas/${emailUsuario.value}`);
+    const resposta = await axios.get(`https://sistema-atendimento-inteligente-clinica.onrender.com/minhas-consultas/${emailUsuario.value}`);
     temAgendamentos.value = resposta.data && resposta.data.length > 0;
   } catch (error) {
     console.error("Erro ao checar histórico", error);

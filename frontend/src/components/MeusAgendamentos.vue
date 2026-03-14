@@ -97,7 +97,7 @@ const carregando = ref(true);
 const erroApi = ref('');
 
 // URL do Backend
-const baseUrl = 'http://localhost:3000';
+const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com';
 
 // ==========================================
 // 🔍 1. BUSCAR AS CONSULTAS

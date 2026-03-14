@@ -187,7 +187,7 @@ const enviarAgendamento = async () => {
   mensagemSucesso.value = '';
 
   try {
-    const resposta = await axios.post('http://localhost:3000/agendamento', form);
+    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/agendamento', form);
     
     // 1. Define a mensagem que veio do backend
     mensagemSucesso.value = resposta.data.mensagem;
