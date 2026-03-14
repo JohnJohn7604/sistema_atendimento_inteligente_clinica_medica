@@ -1,175 +1,183 @@
 <template>
-  <div class="painel-container">
-    <h2>Painel da Secretária 👩‍💻</h2>
-
-    <div v-if="!logado" class="login-box">
-      <p>Acesso restrito. Insira suas credenciais.</p>
-      
-      <div class="campo">
-        <input v-model="usuario" type="text" placeholder="Usuário (ex: admin)" />
-      </div>
-      <div class="campo">
-        <input v-model="senha" type="password" placeholder="Senha (ex: 1234)" />
-      </div>
-      
-      <button @click="fazerLogin" class="btn-login">Entrar no Sistema</button>
-      <div v-if="erroLogin" class="erro-texto" style="margin-top: 10px;">{{ erroLogin }}</div>
+  <div class="container-secretaria">
+    
+    <div class="cabecalho">
+      <h2>Painel da Secretária 👩‍💼</h2>
+      <button @click="$emit('sair')" class="btn-sair">Sair do Sistema</button>
     </div>
 
-    <div v-else>
-      <p>Gerenciamento de Agendamentos Médicos</p>
+    <div v-if="carregando" class="mensagem-status">Carregando agenda da clínica...</div>
+    <div v-else-if="erroApi" class="mensagem-erro">{{ erroApi }}</div>
+    <div v-else-if="todasConsultas.length === 0" class="mensagem-status">Nenhuma consulta agendada na clínica.</div>
 
-      <div v-if="carregando" class="mensagem">Carregando consultas...</div>
-      <div v-else-if="erro" class="erro-texto">{{ erro }}</div>
-      
-      <table v-else-if="consultas.length > 0" class="tabela-consultas">
-        <thead>
-          <tr>
-            <th>Paciente</th>
-            <th>E-mail</th>
-            <th>Data da Consulta</th>
-            <th>Bairro / Cidade</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(consulta, index) in consultas" :key="index">
-            <td><strong>{{ consulta.nome }}</strong></td>
-            <td>{{ consulta.email }}</td>
-            <td>{{ formatarData(consulta.dataConsulta) }}</td>
-            <td>{{ consulta.bairro }} - {{ consulta.cidade }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <table v-else class="tabela-consultas">
+      <thead>
+        <tr>
+          <th>Paciente</th> <th>Data</th>
+          <th>Horário</th>
+          <th>Especialidade</th>
+          <th>Unidade</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="consulta in todasConsultas" :key="consulta.id">
+          
+          <td>
+            <strong>{{ consulta.nome }}</strong><br>
+            <small style="color: #666;">{{ consulta.email }}</small>
+          </td>
+          <td>{{ formatarData(consulta.dataConsulta) }}</td>
+          <td><strong>{{ consulta.horaConsulta }}</strong></td>
+          <td class="destaque-especialidade">{{ consulta.especialidade || 'Clínico Geral' }}</td>
+          <td>{{ consulta.bairro }}</td>
+          
+          <td class="acoes">
+            <button @click="deletarAgendamento(consulta.id, consulta.nome)" class="btn-icone deletar" title="Cancelar Consulta">🗑️ Cancelar</button>
+          </td>
 
-      <div v-else class="mensagem">Nenhum paciente agendado ainda.</div>
-      
-      <button @click="buscarConsultas" class="btn-atualizar">🔄 Atualizar Lista</button>
-      <button @click="sair" class="btn-sair">Sair</button>
-    </div>
+        </tr>
+      </tbody>
+    </table>
+
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
-// Variáveis de controle de Login
-const logado = ref(false);
-const token = ref('');
-const usuario = ref('');
-const senha = ref('');
-const erroLogin = ref('');
+const emit = defineEmits(['sair']);
 
-// Variáveis da Tabela
-const consultas = ref([]);
-const carregando = ref(false);
-const erro = ref('');
+const todasConsultas = ref([]);
+const carregando = ref(true);
+const erroApi = ref('');
 
-// Função para fazer o Login e pegar o Token
-const fazerLogin = async () => {
-  erroLogin.value = '';
-  try {
-    const resposta = await axios.post('https://sistema-atendimento-inteligente-clinica.onrender.com/login', {
-      usuario: usuario.value,
-      senha: senha.value
-    });
+const baseUrl = 'https://sistema-atendimento-inteligente-clinica.onrender.com';
 
-    
-    token.value = resposta.data.token;
-    logado.value = true;
-    
-    
-    buscarConsultas();
-  } catch (err) {
-    erroLogin.value = 'Usuário ou senha incorretos!';
-  }
-};
-
-// Busca os dados no servidor EXIBINDO O CRACHÁ (Token)
-const buscarConsultas = async () => {
+// Busca a agenda de TODOS
+const buscarTodasConsultas = async () => {
   carregando.value = true;
-  erro.value = '';
-  
+  erroApi.value = '';
   try {
-    const resposta = await axios.get('https://sistema-atendimento-inteligente-clinica.onrender.com/consultas', {
-      
-      headers: { Authorization: `Bearer ${token.value}` }
-    });
-    consultas.value = resposta.data;
-  } catch (err) {
-    erro.value = 'Sessão expirada ou acesso negado.';
-    logado.value = false; // Força o login novamente
+    const resposta = await axios.get(`${baseUrl}/consultas`);
+    todasConsultas.value = resposta.data;
+  } catch (error) {
+    erroApi.value = "Erro ao carregar a agenda geral da clínica.";
   } finally {
     carregando.value = false;
   }
 };
 
-const sair = () => {
-  logado.value = false;
-  token.value = '';
-  usuario.value = '';
-  senha.value = '';
+// Secretária cancelando consulta
+const deletarAgendamento = async (id, nomePaciente) => {
+  if (confirm(`⚠️ Tem certeza que deseja cancelar a consulta do(a) paciente ${nomePaciente}?`)) {
+    try {
+      await axios.delete(`${baseUrl}/agendamento/${id}`);
+      alert('Consulta cancelada com sucesso!');
+      buscarTodasConsultas(); // Recarrega a tabela
+    } catch (error) {
+      alert('Erro ao cancelar a consulta.');
+    }
+  }
 };
 
-const formatarData = (dataOriginal) => {
-  if (!dataOriginal) return '-';
-  const [ano, mes, dia] = dataOriginal.split('-');
-  return `${dia}/${mes}/${ano}`;
+const formatarData = (dataSql) => {
+  if (!dataSql) return '';
+  return dataSql.split('-').reverse().join('/');
 };
+
+onMounted(() => {
+  buscarTodasConsultas();
+});
 </script>
 
 <style scoped>
-/* O mesmo CSS de antes, com alguns pequenos ajustes para os botões novos */
-.painel-container {
-  max-width: 800px;
-  width: 90%;
-  margin: 40px auto;
+.container-secretaria {
   background-color: white;
   padding: 30px;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   font-family: Arial, sans-serif;
-  text-align: center;
+  max-width: 1000px; /* Mais largo para caber todas as infos */
+  margin: 40px auto;
 }
 
-.login-box {
-  max-width: 300px;
-  margin: 0 auto;
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 15px;
 }
 
-.campo input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-sizing: border-box;
+h2 {
+  color: #2c3e50;
+  margin: 0;
 }
 
-h2 { color: #333; margin-bottom: 5px; }
-p { color: #666; margin-bottom: 25px; }
-
-.tabela-consultas { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-.tabela-consultas th, .tabela-consultas td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-.tabela-consultas th { background-color: #f8f9fa; color: #333; }
-
-.btn-login, .btn-atualizar, .btn-sair {
-  padding: 10px 20px;
+.btn-sair {
+  background: #dc3545;
   color: white;
   border: none;
+  padding: 8px 15px;
   border-radius: 6px;
+  font-weight: bold;
   cursor: pointer;
-  transition: 0.3s;
-  margin: 5px;
+  transition: 0.2s;
 }
-
-.btn-login { background: #28a745; width: 100%; }
-.btn-login:hover { background: #218838; }
-.btn-atualizar { background: #007bff; }
-.btn-atualizar:hover { background: #0056b3; }
-.btn-sair { background: #dc3545; }
 .btn-sair:hover { background: #c82333; }
 
-.mensagem { padding: 20px; color: #555; }
-.erro-texto { color: #d9534f; font-weight: bold; }
+.tabela-consultas {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.tabela-consultas th, .tabela-consultas td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.tabela-consultas th {
+  background-color: #e9ecef; /* Um cinza um pouco diferente do painel do paciente */
+  color: #333;
+  font-weight: bold;
+}
+
+.tabela-consultas tr:hover {
+  background-color: #f8f9fa;
+}
+
+.destaque-especialidade {
+  color: #17a2b8;
+  font-weight: bold;
+}
+
+.btn-icone {
+  background: #f1f1f1;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: 0.2s;
+  color: #333;
+}
+
+.btn-icone.deletar:hover { 
+  background: #ffcdd2; 
+  color: #d32f2f;
+}
+
+.mensagem-status, .mensagem-erro {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+.mensagem-erro { color: #dc3545; }
 </style>

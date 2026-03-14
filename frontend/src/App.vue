@@ -7,6 +7,7 @@
         <div class="abas">
           <button :class="{ ativo: modoAuth === 'login' }" @click="modoAuth = 'login'">Entrar</button>
           <button :class="{ ativo: modoAuth === 'cadastro' }" @click="modoAuth = 'cadastro'">Criar Conta</button>
+          <button @click="telaAtual = 'login-secretaria'" class="btn-acesso-restrito">Acesso da Secretária 👩‍💼</button>
         </div>
 
         <div v-if="mensagem" :class="{'sucesso-texto': sucesso, 'erro-texto': !sucesso}">
@@ -59,6 +60,33 @@
       />
     </div>
 
+    <div v-else-if="telaAtual === 'login-secretaria'" class="container-login-sec">
+      <div class="card-login-sec">
+        <h2>Área Restrita 🔒</h2>
+        <p>Acesso exclusivo para funcionários da clínica.</p>
+        
+        <input 
+          type="password" 
+          v-model="senhaSecretaria" 
+          placeholder="Digite a senha de acesso" 
+          class="input-senha"
+          @keyup.enter="fazerLoginSecretaria" 
+        />
+        
+        <p v-if="erroSenhaSecretaria" class="erro-senha">{{ erroSenhaSecretaria }}</p>
+        
+        <div class="botoes-sec">
+          <button @click="fazerLoginSecretaria" class="btn-entrar-sec">Entrar no Painel</button>
+          <button @click="telaAtual = 'login'" class="btn-voltar-sec">Voltar</button>
+          </div>
+      </div>
+    </div>
+
+    <PainelSecretaria 
+      v-else-if="telaAtual === 'painel-secretaria'" 
+      @sair="telaAtual = 'login'" 
+    />
+
     <div v-if="telaAtual === 'secretaria'">
       <div class="topo-sistema">
         <span>Painel Administrativo</span>
@@ -92,6 +120,21 @@ const sucesso = ref(false);
 // Aqui estão as memórias separadas que criamos!
 const formLogin = reactive({ email: '', senha: '' });
 const formCadastro = reactive({ nome: '', email: '', senha: '' });
+
+// Variáveis para o login da secretária
+const senhaSecretaria = ref('');
+const erroSenhaSecretaria = ref('');
+
+// Função que valida a senha (estamos usando 'admin123' como senha padrão)
+const fazerLoginSecretaria = () => {
+  if (senhaSecretaria.value === 'admin123') {
+    telaAtual.value = 'painel-secretaria'; // Libera o acesso e muda a tela!
+    senhaSecretaria.value = ''; // Limpa o campo por segurança
+    erroSenhaSecretaria.value = ''; // Limpa qualquer erro antigo
+  } else {
+    erroSenhaSecretaria.value = 'Senha incorreta. Acesso negado!';
+  }
+};
 
 const fazerCadastro = async () => {
   try {
@@ -148,19 +191,167 @@ const verificarAgendamentos = async () => {
 </script>
 
 <style>
-body { background-color: #f4f7f6; margin: 0; font-family: Arial, sans-serif; }
-.auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-.auth-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-.abas { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
-.abas button { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; font-weight: bold; color: #888; }
-.abas button.ativo { color: #007bff; border-bottom: 2px solid #007bff; margin-bottom: -2px; }
-form input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-.btn-acao { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-.btn-acao:hover { background: #0056b3; }
-.topo-sistema { background: #333; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-.btn-sair { background: #dc3545; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
-.btn-sair:hover { background: #c82333; }
-.dica { font-size: 12px; color: #666; margin-top: 15px; }
-.erro-texto { color: red; margin-bottom: 10px; }
-.sucesso-texto { color: green; margin-bottom: 10px; }
+body {
+  background-color: #f4f7f6;
+  margin: 0; font-family: Arial, sans-serif;    
+}
+
+.auth-container { 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; 
+}
+
+.auth-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  width: 350px; text-align: center; 
+}
+
+.abas {
+   display: flex;
+   margin-bottom: 20px;
+   border-bottom: 2px solid #eee;
+}
+
+.abas button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: bold;
+  color: #888;
+}
+
+.abas button.ativo {
+  color: #007bff;
+  border-bottom: 2px solid #007bff;
+  margin-bottom: -2px; 
+}
+
+form input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.btn-acao {
+  width: 100%; padding: 12px;
+  background: #007bff;
+  color: white; border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold; 
+}
+
+.btn-acao:hover {
+   background: #0056b3; 
+}
+
+.topo-sistema {
+  background: #333;
+  color: white;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center; 
+}
+
+.btn-sair {
+  background: #dc3545;
+  color: white; 
+  border: none;
+  padding: 5px 15px;
+  border-radius: 4px;
+  cursor: pointer; 
+}
+
+.btn-sair:hover {
+   background: #c82333; 
+}
+
+.dica {
+  font-size: 12px;
+  color: #666;
+  margin-top: 15px; 
+}
+
+.erro-texto {
+   color: red; 
+   margin-bottom: 10px; 
+}
+
+.sucesso-texto {
+  color: green;
+  margin-bottom: 10px;
+}
+
+.btn-acesso-restrito {
+  background: transparent;
+  border: 1px solid #ccc;
+  color: #666;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 12px;
+}
+.btn-acesso-restrito:hover { background: #f1f1f1; }
+
+.container-login-sec {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+.card-login-sec {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 350px;
+}
+.input-senha {
+  width: 100%;
+  padding: 10px;
+  margin: 15px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+.erro-senha {
+  color: #dc3545;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+.botoes-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.btn-entrar-sec {
+  background: #343a40;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-voltar-sec {
+  background: transparent;
+  border: none;
+  color: #666;
+  text-decoration: underline;
+  cursor: pointer;
+}
 </style>
