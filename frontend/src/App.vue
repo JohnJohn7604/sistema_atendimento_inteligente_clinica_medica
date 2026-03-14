@@ -55,7 +55,7 @@
       <MeusAgendamentos 
         v-else-if="telaPaciente === 'listar'"
         :email-paciente="emailUsuario"
-        @voltar-agendamento="telaPaciente = 'agendar'"
+        @voltar="telaPaciente = 'agendar'"
       />
     </div>
 
