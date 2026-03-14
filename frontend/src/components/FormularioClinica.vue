@@ -114,7 +114,7 @@ const previsaoTempo = ref('');
 const verificarClima = async () => {
   if (!form.cidade || !form.dataConsulta) return;
 
-  const apiKey = import.meta.env.VITE_OPENWEATHER_KEY; 
+  const apiKey = import.meta.env.VITE_OPENWEATHER; 
   const localBusca = `${form.bairro},${form.cidade}`;
   
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(localBusca)}&appid=${apiKey}&units=metric&lang=pt_br`;
